@@ -9,21 +9,22 @@ import subprocess
 import sys
 from datetime import datetime, timedelta
 
+# Note that the folowing packages are Raspberry Pi specific
 from picamera import PiCamera
 from picamera import Color
 
 import RPi.GPIO as GPIO
 
 """
-GPIO Setup
+GPIO Initialization
 """
-def initialize_GPIO(GPIO_config):
+def _initialize_GPIO(GPIO_config):
     GPIO.setwarnings(False)
     GPIO.setmode(GPIO.BOARD)
     # Green LED
     GPIO.setup(GPIO_config["green_led_pin"], GPIO.OUT, initial=GPIO.HIGH)
     # Red LED
-    GPIO.setup(GPIO_config["red_led_pin"], GPIO.OUT, initial=GPIO.HIGH)
+    GPIO.setup(GPIO_config["red_led_pin"], GPIO.OUT, initial=GPIO.LOW)
     # Arcade Button
     GPIO.setup(GPIO_config["button_pin"], GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
@@ -75,18 +76,29 @@ def _launch_command(command:list):
         )
         return None
 
-def _print_image(tmp_image):
+def _print_image(image_path):
     print_image_command = [
         "lp",
         "-o",
         "-fit-to-page",
-        tmp_image
+        image_path
     ]
-    logging.info("Print image [%s]", tmp_image)
+    logging.info("Print image [%s]", image_path)
     _launch_command(print_image_command)
+    
+    logging.info("Wait for printer, sleeping 5 Seconds")
+    time.sleep(5)
+
     return
 
-def _take_image(config_output, config_camera, image_counter):
+def _take_image(config_output, config_camera):
+    # Increment image counter if not temporary
+    if not config_output["temporary"]:
+        config_output["image_counter"] += 1
+        logging.debug("Image counter is [%s]", config_output["image_counter"])
+    
+    logging.debug("Initialize Camera")
+    # Parse configuration options
     resolution_height = config_camera["resolution_height"]
     resolution_width = config_camera["resolution_width"]
     annotate_text_size = config_camera["annotate_text_size"]
@@ -95,7 +107,11 @@ def _take_image(config_output, config_camera, image_counter):
     annotate_background = config_camera["annotate_background"]
     output_path = config_output["output_path"]
     image_name = config_output["image_name"]
+    image_counter = config_output["image_counter"]
     image_path = output_path + image_name + '_' + image_counter + '.jpeg'
+    # Save current image path into config
+    config_output["current_image_path"] = image_path
+    logging.debug("Image Path is [%s]", image_path)
 
     camera = PiCamera()
     logging.debug("Image Resolution: Height=[%s]; Width=[%s]" %(resolution_height,resolution_width))
@@ -113,51 +129,52 @@ def _take_image(config_output, config_camera, image_counter):
     # because this gives the cameras sensor time to sense the light levels
     logging.debug("Sleeping for 4 seconds")
     time.sleep(4)
-    logging.info("Image_path is [%s]" %image_path)
+    logging.info("Capture Picture, Image_path is [%s]" %image_path)
     camera.capture(image_path)
     logging.debug("End Camera Preview")
     camera.stop_preview()
     return
 
+def dummy_function():
+    time.sleep(1)
+
 """
 Main Logic
 - handle button input
 - if button pressed:
-    - activate led
+    - deactivate green led
+    - activate red led
     - take picture
     - print picture
     - increment image counter
-    - deactivate led
+    - deactivate red led
+    - activate green led
 """
 def _main(config):
     logging.info("Initialize GPIOs")
-    initialize_GPIO(config["GPIO"])
+    _initialize_GPIO(config["GPIO"])
 
+    # image counter is used for the image file name(s)
     logging.info("Set image counter to 0")
     config["output"]["image_counter"] = 0
 
+    green_led_pin = config["GPIO"]["green_led_pin"]
+    red_led_pin = config["GPIO"]["red_led_pin"]
+    button_pin = config["GPIO"]["button_pin"]
+
     logging.info("Starting Main Loop")
     while(True):
-        # ---
-        #image_path = output_path + image + '_' + image_counter + '.jpeg'
-        #_take_image(image_path, config["annotate_text"], config["annotate_text_size"], config[""])
-        #_print_image(image_path)
-        #if config["output"]["temporary"]:
-        ##    image_counter += 1
-        #_activate_led()
-        #_take_image(config["camera"],config["output"])
-        #_print_image(config["output"],image_counter)
-        #_deactivate_led()
-        if GPIO.input(23) == GPIO.HIGH:
-            print("button pressed")
-            GPIO.output(18, GPIO.HIGH)
-            GPIO.output(22, GPIO.LOW)
-  #sleep(1)
-        if GPIO.input(23) == GPIO.LOW:
-            GPIO.output(18, GPIO.LOW)
-            GPIO.output(22, GPIO.HIGH)
-
-        continue
+        if GPIO.input(button_pin) == GPIO.HIGH:
+            # Switch LEDs
+            GPIO.output(red_led_pin, GPIO.HIGH)
+            GPIO.output(green_led_pin, GPIO.LOW)
+            # Start
+            dummy_function()
+            #config["output"] = _take_image(config["camera"],config["output"])
+            #_print_image(config["output"]["current_image_path"])
+            # Switch LEDs back
+            GPIO.output(red_led_pin, GPIO.LOW)
+            GPIO.output(green_led_pin, GPIO.HIGH)
     return 0
 
 """
@@ -227,19 +244,21 @@ def main(arguments):
             logging.info("Base image name is [%s]", config["output"]["image_name"])
             config["camera"]["annotate_text"] = cfg.get("camera", "annotate_text")
             logging.info("Annotate text is [%s]", config["camera"]["annotate_text"])
+            config["camera"]["annotate_text_size"] = cfg.getint("camera","annotate_text_size")
+            logging.info("Annotate text size is [%s]", config["camera"]["annotate_text_size"])
             config["camera"]["annotate_foreground"] = cfg.get("camera", "annotate_foreground")
             logging.info("Annotate foreground color is [%s]", config["camera"]["annotate_foreground"])
             config["camera"]["annotate_background"] = cfg.get("camera", "annotate_background")
             logging.info("Annotate background color is [%s]", config["camera"]["annotate_background"])
-            config["camera"]["resolution_height"] = cfg.get("camera", "resolution_height")
+            config["camera"]["resolution_height"] = cfg.getint("camera", "resolution_height")
             logging.info("Image resoltion height is [%s]", config["camera"]["resolution_height"])
-            config["camera"]["resolution_width"] = cfg.get("camera", "resolution_width")
+            config["camera"]["resolution_width"] = cfg.getint("camera", "resolution_width")
             logging.info("Image resolution width is [%s]", config["camera"]["resolution_width"])
-            config["GPIO"]["button_pin"] = cfg.get("GPIO","button_pin")
+            config["GPIO"]["button_pin"] = cfg.getint("GPIO","button_pin")
             logging.info("Button GPIO is [%s]", config["GPIO"]["button_pin"])
-            config["GPIO"]["green_led_pin"] = cfg.get("GPIO","green_led_pin")
+            config["GPIO"]["green_led_pin"] = cfg.getint("GPIO","green_led_pin")
             logging.info("Green LED GPIO is [%s]", config["GPIO"]["green_led_pin"])
-            config["GPIO"]["red_led_pin"] = cfg.get("GPIO","red_led_pin")
+            config["GPIO"]["red_led_pin"] = cfg.getint("GPIO","red_led_pin")
             logging.info("Red LED GPIO is [%s]", config["GPIO"]["red_led_pin"])
         except(configparser.NoSectionError, configparser.NoOptionError) as e:
             logging.exception("Could not parse configuration options. Error: [%s]", str(e))
@@ -264,6 +283,10 @@ def main(arguments):
             raise
 
     finally:
+        """
+        GPIO Cleanup
+        """
+        GPIO.cleanup()
         """
         Calculate Duration and exit the application
         """
