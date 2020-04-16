@@ -9,8 +9,23 @@ import subprocess
 import sys
 from datetime import datetime, timedelta
 
-#from picamera import PiCamera
-#from picamera import Color
+from picamera import PiCamera
+from picamera import Color
+
+import RPi.GPIO as GPIO
+
+"""
+GPIO Setup
+"""
+def initialize_GPIO(GPIO_config):
+    GPIO.setwarnings(False)
+    GPIO.setmode(GPIO.BOARD)
+    # Green LED
+    GPIO.setup(GPIO_config["green_led_pin"], GPIO.OUT, initial=GPIO.HIGH)
+    # Red LED
+    GPIO.setup(GPIO_config["red_led_pin"], GPIO.OUT, initial=GPIO.HIGH)
+    # Arcade Button
+    GPIO.setup(GPIO_config["button_pin"], GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
 """
 Helper Function to call an bash command
@@ -106,10 +121,20 @@ def _take_image(config_output, config_camera, image_counter):
 
 """
 Main Logic
-- describe main logic here
+- handle button input
+- if button pressed:
+    - activate led
+    - take picture
+    - print picture
+    - increment image counter
+    - deactivate led
 """
 def _main(config):
-    image_counter = 0
+    logging.info("Initialize GPIOs")
+    initialize_GPIO(config["GPIO"])
+
+    logging.info("Set image counter to 0")
+    config["output"]["image_counter"] = 0
 
     logging.info("Starting Main Loop")
     while(True):
@@ -117,10 +142,22 @@ def _main(config):
         #image_path = output_path + image + '_' + image_counter + '.jpeg'
         #_take_image(image_path, config["annotate_text"], config["annotate_text_size"], config[""])
         #_print_image(image_path)
-        #if config["temporary"]:
-        #    image_counter += 1
-        if False:
-            print("hello")
+        #if config["output"]["temporary"]:
+        ##    image_counter += 1
+        #_activate_led()
+        #_take_image(config["camera"],config["output"])
+        #_print_image(config["output"],image_counter)
+        #_deactivate_led()
+        if GPIO.input(23) == GPIO.HIGH:
+            print("button pressed")
+            GPIO.output(18, GPIO.HIGH)
+            GPIO.output(22, GPIO.LOW)
+  #sleep(1)
+        if GPIO.input(23) == GPIO.LOW:
+            GPIO.output(18, GPIO.LOW)
+            GPIO.output(22, GPIO.HIGH)
+
+        continue
     return 0
 
 """
@@ -131,7 +168,7 @@ def main(arguments):
         t0 = time.monotonic()
         exit_status=2
         """
-        Initialize configuration
+        Initialize configuration parser
         """
         cfg = configparser.ConfigParser()
         try:
@@ -177,7 +214,7 @@ def main(arguments):
         config = {}
         config["output"] = {}
         config["camera"] = {}
-        config["button"] = {}
+        config["GPIO"] = {}
         try:
             config["output"]["output_path"] = cfg.get("output","output_path")
             logging.info("Output-path: [%s]", config["output"]["output_path"])
@@ -195,10 +232,15 @@ def main(arguments):
             config["camera"]["annotate_background"] = cfg.get("camera", "annotate_background")
             logging.info("Annotate background color is [%s]", config["camera"]["annotate_background"])
             config["camera"]["resolution_height"] = cfg.get("camera", "resolution_height")
-            logging.info("Resoltion height is [%s]", config["camera"]["resolution_height"])
+            logging.info("Image resoltion height is [%s]", config["camera"]["resolution_height"])
             config["camera"]["resolution_width"] = cfg.get("camera", "resolution_width")
-            logging.info("Resolution width is [%s]", config["camera"]["resolution_width"])
-            config["button"]["button_pin"] = cfg.get("button","button_pin")
+            logging.info("Image resolution width is [%s]", config["camera"]["resolution_width"])
+            config["GPIO"]["button_pin"] = cfg.get("GPIO","button_pin")
+            logging.info("Button GPIO is [%s]", config["GPIO"]["button_pin"])
+            config["GPIO"]["green_led_pin"] = cfg.get("GPIO","green_led_pin")
+            logging.info("Green LED GPIO is [%s]", config["GPIO"]["green_led_pin"])
+            config["GPIO"]["red_led_pin"] = cfg.get("GPIO","red_led_pin")
+            logging.info("Red LED GPIO is [%s]", config["GPIO"]["red_led_pin"])
         except(configparser.NoSectionError, configparser.NoOptionError) as e:
             logging.exception("Could not parse configuration options. Error: [%s]", str(e))
             raise
