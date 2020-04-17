@@ -81,13 +81,15 @@ def _print_image(image_path):
         "lp",
         "-o",
         "-fit-to-page",
-        image_path
+        image_path,
+        "-d",
+        "Zijiang-ZJ-58"
     ]
     logging.info("Print image [%s]", image_path)
     _launch_command(print_image_command)
     
     logging.info("Wait for printer, sleeping 5 Seconds")
-    time.sleep(5)
+    time.sleep(30)
 
     return
 
@@ -108,7 +110,7 @@ def _take_image(config_output, config_camera):
     output_path = config_output["output_path"]
     image_name = config_output["image_name"]
     image_counter = config_output["image_counter"]
-    image_path = output_path + image_name + '_' + image_counter + '.jpeg'
+    image_path = output_path + image_name + '_' + str(image_counter) + '.jpeg'
     # Save current image path into config
     config_output["current_image_path"] = image_path
     logging.debug("Image Path is [%s]", image_path)
@@ -117,14 +119,19 @@ def _take_image(config_output, config_camera):
     logging.debug("Image Resolution: Height=[%s]; Width=[%s]" %(resolution_height,resolution_width))
     camera.resolution = (resolution_height, resolution_width)
     logging.debug("Start Camera Preview")
-    camera.start_preview()
+    # turn camera to black and white
+    camera.color_effects = (128,128)
+    camera.contrast = 75
+    camera.exposure_mode = 'night'
     logging.debug("Set annotate text size to [%s]" %(annotate_text_size))
-    camera.annotate_size = annotate_text_size
+    camera.annotate_text_size = annotate_text_size
     camera.annotate_foreground = Color(annotate_foreground)
     camera.annotate_background = Color(annotate_background)
     text = ' ' + annotate_text + ' '
     logging.debug("Annotate text is [%s]" %(text))
     camera.annotate_text = text
+
+    camera.start_preview()
     # it is important to sleep for at least two seconds before capturing an image, 
     # because this gives the cameras sensor time to sense the light levels
     logging.debug("Sleeping for 4 seconds")
@@ -133,10 +140,9 @@ def _take_image(config_output, config_camera):
     camera.capture(image_path)
     logging.debug("End Camera Preview")
     camera.stop_preview()
-    return
+    camera.close()
 
-def dummy_function():
-    time.sleep(1)
+    return config_output
 
 """
 Main Logic
@@ -169,9 +175,8 @@ def _main(config):
             GPIO.output(red_led_pin, GPIO.HIGH)
             GPIO.output(green_led_pin, GPIO.LOW)
             # Start
-            dummy_function()
-            #config["output"] = _take_image(config["camera"],config["output"])
-            #_print_image(config["output"]["current_image_path"])
+            config["output"] = _take_image(config["output"],config["camera"])
+            _print_image(config["output"]["current_image_path"])
             # Switch LEDs back
             GPIO.output(red_led_pin, GPIO.LOW)
             GPIO.output(green_led_pin, GPIO.HIGH)
