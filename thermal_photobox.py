@@ -144,6 +144,22 @@ def _take_image(config_output, config_camera):
 
     return config_output
 
+def _red_led_blinking(red_led_pin):
+    logging.info("Red LED blinking")
+    for x in range(3):
+        time.sleep(0.5)
+        GPIO.output(red_led_pin, GPIO.LOW)
+        time.sleep(0.5)
+        GPIO.output(red_led_pin, GPIO.HIGH)
+
+def _red_led_flashing(red_led_pin):
+    logging.info("Red LED flashing")
+    for x in range(2):
+        time.sleep(0.2)
+        GPIO.output(red_led_pin, GPIO.LOW)
+        time.sleep(0.2)
+        GPIO.output(red_led_pin, GPIO.HIGH)
+
 """
 Main Logic
 - handle button input
