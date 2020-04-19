@@ -238,7 +238,7 @@ def main(arguments):
         )
         logging_handler.setFormatter(logging_formatter)
         logging.getLogger().addHandler(logging_handler)
-        logging.getLogger().setLevel(logging.DEBUG)
+        logging.getLogger().setLevel(logging.INFO)
 
         """
         Parse the remaining configuration options into a configuration dictionary
