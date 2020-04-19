@@ -19,6 +19,7 @@ import RPi.GPIO as GPIO
 GPIO Initialization
 """
 def _initialize_GPIO(GPIO_config):
+    logging.info("Initialize GPIO")
     GPIO.setwarnings(False)
     GPIO.setmode(GPIO.BOARD)
     # Green LED
@@ -75,18 +76,6 @@ Helper Function to call an bash command
   - print output of command
 """
 def _launch_command(command:list):
-    """
-    Run the command given. The command has to be simple, not containing any 
-    bash elements.
-
-    Raise a ValueError if the command asked is not found.
-    :param command: the different parts of the command have to be given as 
-    different elements of a list:
-
-    example: "ls -l file.txt" has to be given as: ["ls", "-l", "file.txt"]
-    :return:    The output of the command decoded with UTF-8, 
-                None if an issue occurred
-    """
     try:
         logging.debug('Start subprocess '+'"'+ ' '.join(map(str,command))+'"')
         process = subprocess.Popen(
@@ -135,14 +124,6 @@ def _take_image(config_output, config_camera, camera):
         config_output["image_counter"] += 1
         logging.debug("Image counter is [%s]", config_output["image_counter"])
     
-    logging.debug("Initialize Camera")
-    # Parse configuration options
-    resolution_height = config_camera["resolution_height"]
-    resolution_width = config_camera["resolution_width"]
-    annotate_text_size = config_camera["annotate_text_size"]
-    annotate_text = config_camera["annotate_text"]
-    annotate_foreground = config_camera["annotate_foreground"]
-    annotate_background = config_camera["annotate_background"]
     output_path = config_output["output_path"]
     image_name = config_output["image_name"]
     image_counter = config_output["image_counter"]
@@ -151,32 +132,8 @@ def _take_image(config_output, config_camera, camera):
     config_output["current_image_path"] = image_path
     logging.debug("Image Path is [%s]", image_path)
 
-    camera = PiCamera()
-    logging.debug("Image Resolution: Height=[%s]; Width=[%s]" %(resolution_height,resolution_width))
-    camera.resolution = (resolution_height, resolution_width)
-    logging.debug("Start Camera Preview")
-    # turn camera to black and white
-    camera.color_effects = (128,128)
-    camera.contrast = 75
-    camera.exposure_mode = 'night'
-    logging.debug("Set annotate text size to [%s]" %(annotate_text_size))
-    camera.annotate_text_size = annotate_text_size
-    camera.annotate_foreground = Color(annotate_foreground)
-    camera.annotate_background = Color(annotate_background)
-    text = ' ' + annotate_text + ' '
-    logging.debug("Annotate text is [%s]" %(text))
-    camera.annotate_text = text
-
-    camera.start_preview()
-    # it is important to sleep for at least two seconds before capturing an image, 
-    # because this gives the cameras sensor time to sense the light levels
-    logging.debug("Sleeping for 4 seconds")
-    time.sleep(4)
     logging.info("Capture Picture, Image_path is [%s]" %image_path)
     camera.capture(image_path)
-    logging.debug("End Camera Preview")
-    camera.stop_preview()
-    camera.close()
 
     return config_output
 
@@ -202,20 +159,14 @@ Main Logic
 - if button pressed:
     - deactivate green led
     - activate red led
-    - take picture
+    - red led flashing
+    - red led blinking
+    - capture picture
     - print picture
-    - increment image counter
     - deactivate red led
     - activate green led
 """
-def _main(config):
-    logging.info("Initialize GPIOs")
-    _initialize_GPIO(config["GPIO"])
-
-    # image counter is used for the image file name(s)
-    logging.info("Set image counter to 0")
-    config["output"]["image_counter"] = 0
-
+def _main(config, camera):
     green_led_pin = config["GPIO"]["green_led_pin"]
     red_led_pin = config["GPIO"]["red_led_pin"]
     button_pin = config["GPIO"]["button_pin"]
@@ -224,12 +175,19 @@ def _main(config):
     while(True):
         if GPIO.input(button_pin) == GPIO.HIGH:
             # Switch LEDs
+            logging.info("Button pressed! Switching LEDs")
             GPIO.output(red_led_pin, GPIO.HIGH)
             GPIO.output(green_led_pin, GPIO.LOW)
+
+            # Red LED blinking and flashing for visual feedback
+            _red_led_blinking(red_led_pin)
+            _red_led_flashing(red_led_pin)
+
             # Start
             config["output"] = _take_image(config["output"],config["camera"],camera)
             _print_image(config["output"]["current_image_path"])
             # Switch LEDs back
+            logging.info("Switching LEDs back")
             GPIO.output(red_led_pin, GPIO.LOW)
             GPIO.output(green_led_pin, GPIO.HIGH)
     return 0
@@ -292,11 +250,11 @@ def main(arguments):
         try:
             config["output"]["output_path"] = cfg.get("output","output_path")
             logging.info("Output-path: [%s]", config["output"]["output_path"])
-            config["output"]["temporary"] = cfg.get("output", "temporary")
+            config["output"]["temporary"] = cfg.getboolean("output", "temporary")
             if config["output"]["temporary"]:
-                logging.info("Image are saved only temporary")
+                logging.info("Images are saved only temporary")
             else:
-                logging.info("images are saved permanently")
+                logging.info("Images are saved permanently")
             config["output"]["image_name"] = cfg.get("output","image_name")
             logging.info("Base image name is [%s]", config["output"]["image_name"])
             config["camera"]["annotate"] = cfg.getboolean("camera", "annotate")
