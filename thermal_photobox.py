@@ -374,7 +374,7 @@ Load the CLI parameters
 """
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Lorem ipsum dolor sit amet"
+        description="Thermal Photobox for low budget instant photos"
     )
     parser.add_argument(
         "-c", "--config",
