@@ -1,0 +1,12 @@
+[Unit]
+Description=Thermal Photobox
+After=multi-user.target
+
+[Service]
+Type=idle
+WorkingDirectory=/home/pi/scripts/thermal_photobox
+ExecStart=/usr/bin/python3 /home/pi/scripts/thermal_photobox/thermal_photobox.py &
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
