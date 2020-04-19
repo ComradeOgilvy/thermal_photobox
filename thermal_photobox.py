@@ -186,8 +186,9 @@ def _main(config, camera):
             # Start
             config["output"] = _take_image(config["output"],config["camera"],camera)
             _print_image(config["output"]["current_image_path"])
+
             # Switch LEDs back
-            logging.info("Switching LEDs back")
+            logging.debug("Switching LEDs back")
             GPIO.output(red_led_pin, GPIO.LOW)
             GPIO.output(green_led_pin, GPIO.HIGH)
     return 0
@@ -296,6 +297,7 @@ def main(arguments):
                 "=== START OF APPLICATION AT %s ===",
                 datetime.utcnow().isoformat()
             )
+
         try:
             # Initialize GPIOs
             _initialize_GPIO(config["GPIO"])
@@ -305,6 +307,7 @@ def main(arguments):
             # image counter is used for the image file name(s)
             logging.info("Set image counter to 0")
             config["output"]["image_counter"] = 0
+
             """
             start main logic
             """
@@ -315,18 +318,12 @@ def main(arguments):
             raise
 
     finally:
-        """
-        GPIO Cleanup
-        """
+        # GPIO Cleanup
         GPIO.cleanup()
-        """
-        Camera Cleanup
-        """
+        # Camera Cleanup
         camera.stop_preview()
         camera.close()
-        """
-        Calculate Duration and exit the application
-        """
+        # Calculate Duration and exit the application
         t1 = time.monotonic()
         duration = t1 - t0
         logging.critical(
@@ -334,6 +331,7 @@ def main(arguments):
             datetime.utcnow().isoformat(),
             timedelta(seconds=duration),
         )
+
         sys.exit(exit_status)
 
 """
