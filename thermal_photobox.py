@@ -299,6 +299,11 @@ def main(arguments):
                 logging.info("images are saved permanently")
             config["output"]["image_name"] = cfg.get("output","image_name")
             logging.info("Base image name is [%s]", config["output"]["image_name"])
+            config["camera"]["annotate"] = cfg.getboolean("camera", "annotate")
+            if config["camera"]["annotate"]:
+                logging.info("Annotation is enabled")
+            else:
+                logging.info("Annotation is disabled")
             config["camera"]["annotate_text"] = cfg.get("camera", "annotate_text")
             logging.info("Annotate text is [%s]", config["camera"]["annotate_text"])
             config["camera"]["annotate_text_size"] = cfg.getint("camera","annotate_text_size")
