@@ -29,6 +29,42 @@ def _initialize_GPIO(GPIO_config):
     GPIO.setup(GPIO_config["button_pin"], GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
 """
+Camera Initialization
+"""
+def _initialize_camera(config_camera):
+    logging.info("Initialize Camera")
+    # Parse configuration options
+    resolution_height = config_camera["resolution_height"]
+    resolution_width = config_camera["resolution_width"]
+    annotate_text_size = config_camera["annotate_text_size"]
+    annotate_text = config_camera["annotate_text"]
+    annotate_foreground = config_camera["annotate_foreground"]
+    annotate_background = config_camera["annotate_background"]
+
+    camera = PiCamera()
+    logging.debug("Image Resolution: Height=[%s]; Width=[%s]" %(resolution_height,resolution_width))
+    camera.resolution = (resolution_height, resolution_width)
+    # turn camera to black and white
+    camera.color_effects = (128,128)
+    camera.contrast = 70
+    camera.brightness = 70
+    camera.exposure_mode = 'auto'
+
+    if config_camera["annotate"]:
+        logging.debug("Set annotate text size to [%s]" %(annotate_text_size))
+        camera.annotate_text_size = annotate_text_size
+        camera.annotate_foreground = Color(annotate_foreground)
+        camera.annotate_background = Color(annotate_background)
+        text = ' ' + annotate_text + ' '
+        logging.debug("Annotate text is [%s]" %(text))
+        camera.annotate_text = text
+
+    logging.info("Start Camera Preview")
+    camera.start_preview()
+
+    return camera
+
+"""
 Helper Function to call an bash command
 - calls a shell command and returns the output (utf8 encoded)
 - stderr is piped to stdout
@@ -93,7 +129,7 @@ def _print_image(image_path):
 
     return
 
-def _take_image(config_output, config_camera):
+def _take_image(config_output, config_camera, camera):
     # Increment image counter if not temporary
     if not config_output["temporary"]:
         config_output["image_counter"] += 1
@@ -191,7 +227,7 @@ def _main(config):
             GPIO.output(red_led_pin, GPIO.HIGH)
             GPIO.output(green_led_pin, GPIO.LOW)
             # Start
-            config["output"] = _take_image(config["output"],config["camera"])
+            config["output"] = _take_image(config["output"],config["camera"],camera)
             _print_image(config["output"]["current_image_path"])
             # Switch LEDs back
             GPIO.output(red_led_pin, GPIO.LOW)
@@ -294,10 +330,18 @@ def main(arguments):
                 datetime.utcnow().isoformat()
             )
         try:
+            # Initialize GPIOs
+            _initialize_GPIO(config["GPIO"])
+            # Initialize Camera
+            camera = _initialize_camera(config["camera"])
+
+            # image counter is used for the image file name(s)
+            logging.info("Set image counter to 0")
+            config["output"]["image_counter"] = 0
             """
             start main logic
             """
-            exit_status = _main(config)
+            exit_status = _main(config,camera)
         except Exception as e:
             exit_status = 3
             logging.exception("Execution failed: %s", str(e))
@@ -308,6 +352,11 @@ def main(arguments):
         GPIO Cleanup
         """
         GPIO.cleanup()
+        """
+        Camera Cleanup
+        """
+        camera.stop_preview()
+        camera.close()
         """
         Calculate Duration and exit the application
         """
