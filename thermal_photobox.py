@@ -47,8 +47,8 @@ def _initialize_camera(config_camera):
     camera.resolution = (resolution_height, resolution_width)
     # turn camera to black and white
     camera.color_effects = (128,128)
-    camera.contrast = 70
-    camera.brightness = 70
+    camera.contrast = config_camera["contrast"]
+    camera.brightness = config_camera["brightness"]
     camera.exposure_mode = 'auto'
 
     if config_camera["annotate"]:
