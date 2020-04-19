@@ -88,8 +88,8 @@ def _print_image(image_path):
     logging.info("Print image [%s]", image_path)
     _launch_command(print_image_command)
     
-    logging.info("Wait for printer, sleeping 5 Seconds")
-    time.sleep(30)
+    logging.info("Wait for printer, sleeping 20 Seconds")
+    time.sleep(20)
 
     return
 
