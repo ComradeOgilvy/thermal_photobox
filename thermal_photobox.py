@@ -112,11 +112,23 @@ def _print_image(image_path):
     ]
     logging.info("Print image [%s]", image_path)
     _launch_command(print_image_command)
-    
-    logging.info("Wait for printer, sleeping 20 Seconds")
-    time.sleep(20)
 
     return
+
+def _wait_for_printer():
+    logging.info("Wait for printer to finish printing")
+    printer_status_command = [
+        "lpstat",
+        "-p",
+        "Zijiang-ZJ-58"
+    ]
+    while True:
+        if "Zijiang-ZJ-58 is idle" in _launch_command(printer_status_command):
+            break
+        else:
+            time.sleep(1)
+            continue
+
 
 def _take_image(config_output, config_camera, camera):
     # Increment image counter if not temporary
@@ -186,6 +198,8 @@ def _main(config, camera):
             # Start
             config["output"] = _take_image(config["output"],config["camera"],camera)
             _print_image(config["output"]["current_image_path"])
+
+            _wait_for_printer()
 
             # Switch LEDs back
             logging.debug("Switching LEDs back")
