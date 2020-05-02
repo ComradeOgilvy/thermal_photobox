@@ -287,7 +287,7 @@ def main(arguments):
             config["camera"]["annotate_background"] = cfg.get("camera", "annotate_background")
             logging.info("Annotate background color is [%s]", config["camera"]["annotate_background"])
             config["camera"]["resolution_height"] = cfg.getint("camera", "resolution_height")
-            logging.info("Image resoltion height is [%s]", config["camera"]["resolution_height"])
+            logging.info("Image resolution height is [%s]", config["camera"]["resolution_height"])
             config["camera"]["resolution_width"] = cfg.getint("camera", "resolution_width")
             logging.info("Image resolution width is [%s]", config["camera"]["resolution_width"])
             config["camera"]["contrast"] = cfg.getint("camera", "contrast")
