@@ -134,6 +134,7 @@ def _take_image(config_output, config_camera, camera):
     # Increment image counter if not temporary
     if not config_output["temporary"]:
         config_output["image_counter"] += 1
+        update_image_counter(config_output["image_counter"])
         logging.debug("Image counter is [%s]", config_output["image_counter"])
     
     output_path = config_output["output_path"]
@@ -164,6 +165,10 @@ def _red_led_flashing(red_led_pin):
         GPIO.output(red_led_pin, GPIO.LOW)
         time.sleep(0.2)
         GPIO.output(red_led_pin, GPIO.HIGH)
+
+def update_image_counter(image_counter):
+    with open('counter', 'w') as counter:    # save
+        counter.write(image_counter)
 
 """
 Main Logic
@@ -304,6 +309,12 @@ def main(arguments):
             logging.exception("Could not parse configuration options. Error: [%s]", str(e))
             raise
 
+        # image counter is used for the image file name(s)
+        logging.info("Read image counter")
+        with open('counter','r') as counter:
+            config["output"]["image_counter"] = int(counter.read())
+            logging.info("Image counter is [%s]", config["output"]["image_counter"])
+
         """
         Start counting the time and start application
         """
@@ -318,10 +329,6 @@ def main(arguments):
             _initialize_GPIO(config["GPIO"])
             # Initialize Camera
             camera = _initialize_camera(config["camera"])
-
-            # image counter is used for the image file name(s)
-            logging.info("Set image counter to 0")
-            config["output"]["image_counter"] = 0
 
             """
             start main logic
