@@ -205,6 +205,7 @@ def _main(config, camera):
             logging.debug("Switching LEDs back")
             GPIO.output(red_led_pin, GPIO.LOW)
             GPIO.output(green_led_pin, GPIO.HIGH)
+        time.sleep(0.05)
     return 0
 
 """
