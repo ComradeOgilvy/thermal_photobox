@@ -3,10 +3,9 @@ Description=Thermal Photobox Service
 After=multi-user.target
 
 [Service]
-Type=idle
+Type=simple
 WorkingDirectory=/home/pi/scripts/thermal_photobox
-ExecStart=/usr/bin/python3 /home/pi/scripts/thermal_photobox/thermal_photobox.py &
-Restart=always
+ExecStart=/usr/bin/python3 /home/pi/scripts/thermal_photobox/thermal_photobox.py
 KillSignal=SIGINT
 
 [Install]
