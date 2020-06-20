@@ -67,7 +67,7 @@ def _initialize_camera(config_camera):
         camera.annotate_text = text
 
     logging.info("Start Camera Preview")
-    camera.start_preview()
+    #camera.start_preview()
 
     return camera
 
@@ -209,6 +209,7 @@ def _main(config, camera):
     logging.info("Starting Main Loop")
     while(True):
         if GPIO.input(button_pin) == GPIO.HIGH:
+            camera.start_preview()
             # Switch LEDs
             logging.info("Button pressed! Switching LEDs")
             GPIO.output(red_led_pin, GPIO.HIGH)
@@ -223,6 +224,7 @@ def _main(config, camera):
             config["output"] = _take_image(
                 config["output"], config["camera"], camera)
             _print_image(config["output"]["current_image_path"])
+            camera.stop_preview()
             GPIO.output(red_led_pin, GPIO.HIGH)
             _wait_for_printer()
 
